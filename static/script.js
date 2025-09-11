@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const messageInput = document.getElementById('messageInput');
     const sendButton = document.getElementById('sendButton');
     
-    let currentFileName = null;
+    let uploadedFiles = []; // 存储所有上传的文件名
     let isWaitingForResponse = false;
     
     // 文件上传相关事件
@@ -27,7 +27,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     fileInput.addEventListener('change', () => {
         if (fileInput.files.length > 0) {
-            uploadFile(fileInput.files[0]);
+            // 处理所有选中的文件
+            for (let i = 0; i < fileInput.files.length; i++) {
+                uploadFile(fileInput.files[i]);
+            }
         }
     });
     
@@ -54,9 +57,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     dropArea.addEventListener('drop', (e) => {
-        const file = e.dataTransfer.files[0];
-        if (file) {
-            uploadFile(file);
+        // 处理所有拖放的文件
+        for (let i = 0; i < e.dataTransfer.files.length; i++) {
+            uploadFile(e.dataTransfer.files[i]);
         }
     }, false);
     
@@ -67,8 +70,21 @@ document.addEventListener('DOMContentLoaded', function() {
         const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
         
         if (!validTypes.includes(fileExtension)) {
-            uploadStatus.textContent = '不支持的文件类型，请上传PDF、Word或TXT格式的知识库文件';
+            uploadStatus.textContent = `不支持的文件类型: ${file.name}`;
             uploadStatus.className = 'upload-status error';
+            setTimeout(() => {
+                uploadStatus.textContent = '';
+            }, 3000);
+            return;
+        }
+        
+        // 检查文件是否已经上传过
+        if (uploadedFiles.includes(file.name)) {
+            uploadStatus.textContent = `文件 ${file.name} 已经上传过了`;
+            uploadStatus.className = 'upload-status error';
+            setTimeout(() => {
+                uploadStatus.textContent = '';
+            }, 3000);
             return;
         }
         
@@ -77,7 +93,7 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('file', file);
         
         // 显示上传中状态
-        uploadStatus.textContent = '上传中...';
+        uploadStatus.textContent = `上传中: ${file.name}`;
         uploadStatus.className = 'upload-status';
         
         // 发送上传请求
@@ -88,18 +104,28 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
+                // 添加到已上传文件列表
+                uploadedFiles.push(data.filename);
+                
                 uploadStatus.textContent = `知识库文件 ${data.filename} 上传成功！`;
                 uploadStatus.className = 'upload-status success';
-                currentFileName = data.filename;
                 
                 // 启用聊天功能
                 messageInput.disabled = false;
                 sendButton.disabled = false;
                 
                 // 添加系统消息
-                addMessage('system', `知识库文件 ${data.filename} 已上传，您可以开始提问了。`);
+                const message = uploadedFiles.length === 1 
+                    ? `知识库文件 ${data.filename} 已上传，您可以开始提问了。` 
+                    : `知识库文件 ${data.filename} 已上传，当前共上传了 ${uploadedFiles.length} 个文件。`;
+                addMessage('system', message);
+                
+                // 3秒后清除上传状态
+                setTimeout(() => {
+                    uploadStatus.textContent = '';
+                }, 3000);
             } else {
-                uploadStatus.textContent = data.error || '上传失败';
+                uploadStatus.textContent = `上传失败: ${data.error || '未知错误'}`;
                 uploadStatus.className = 'upload-status error';
             }
         })
@@ -209,10 +235,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function fetchChatResponse(message) {
-        // 构建包含文件名的查询参数
+        // 只传递用户消息，文件信息由服务器从会话中获取
         const queryParams = new URLSearchParams({
-            text: message,
-            file: currentFileName || ''
+            text: message
         });
         
         // 创建EventSource对象来接收服务器发送的事件
