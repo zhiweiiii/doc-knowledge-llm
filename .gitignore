@@ -6,4 +6,7 @@
 .idea/vcs.xml
 .idea/inspectionProfiles/profiles_settings.xml
 __pycache__/*
+<<<<<<< HEAD
 model/model.safetensors
+=======
+>>>>>>> ae49bb1cb06bf6104abd6d1db5c73b7bd67a7d14
