@@ -13,7 +13,8 @@ document.addEventListener('DOMContentLoaded', function() {
     let isWaitingForResponse = false;
     
     // 文件上传相关事件
-    uploadButton.addEventListener('click', () => {
+    uploadButton.addEventListener('click', (e) => {
+        e.stopPropagation(); // 阻止事件冒泡，避免触发dropArea的click事件
         fileInput.click();
     });
     
