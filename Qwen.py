@@ -71,7 +71,14 @@ class QwenChatbot:
                     self.print_len = len(text)
                     self.final_text = text
                     # 通过回调函数返回新文本，确保移除任何多余的格式或前缀
+                    # 确保正确处理所有字符编码
                     if self.new_text_callback:
+                        # 确保new_text是字符串类型
+                        if isinstance(new_text, bytes):
+                            try:
+                                new_text = new_text.decode('utf-8', errors='replace')
+                            except:
+                                pass
                         self.new_text_callback(new_text)
             
             def end(self):

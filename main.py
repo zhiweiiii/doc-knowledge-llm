@@ -120,14 +120,18 @@ def chat():
     # 使用SSE（Server-Sent Events）实现流式响应，返回纯文本格式
     def generate():
         try:
-           
+            
             # 然后发送实际的流式响应，直接返回纯文本内容
+            # 确保中文和特殊字符正确编码
             for chunk in qwenThread.stream_chat(text):
-                yield "data: %s\n\n" % chunk
+                # 确保内容是字符串并正确编码
+                chunk_str = str(chunk) if chunk else ''
+                yield f"data: {chunk_str}\n\n"
         except Exception as e:
             app.logger.error(f"流式响应错误: {str(e)}")
             # 返回错误消息
-            yield "data: 发生错误: %s\n\n" % str(e)
+            error_str = str(e) if e else '未知错误'
+            yield f"data: 发生错误: {error_str}\n\n"
     
     app.logger.info("结束")
     return app.response_class(generate(), mimetype='text/event-stream')

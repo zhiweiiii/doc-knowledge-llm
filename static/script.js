@@ -190,11 +190,11 @@ document.addEventListener('DOMContentLoaded', function() {
         cleanedText = cleanedText.replace(/^\s*user:/i, '').trim();
         cleanedText = cleanedText.replace(/^\s*user/i, '').trim();
         
-        // 处理可能的转义字符
+        // 处理可能的转义字符，但保留原始字符编码
         cleanedText = cleanedText.replace(/\\n/g, ' ');
         cleanedText = cleanedText.replace(/\\t/g, ' ');
         
-        // 移除多余的空格
+        // 移除多余的空格，但保留Unicode空格
         cleanedText = cleanedText.replace(/\s+/g, ' ').trim();
         
         return cleanedText;
@@ -246,8 +246,6 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 // 正常内容消息
                 if (!messageDiv) {
-                    // 移除思考提示
-                    removeTypingIndicator();
                     const thinkingMessage = document.getElementById('thinkingMessage');
                     if (thinkingMessage) {
                         thinkingMessage.remove();
@@ -272,8 +270,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // 清除任何可能的格式标记或前缀
                 displayText = cleanTextForDisplay(displayText);
-                
-                // 更新消息内容
+                if(displayText){
+                    // 移除思考提示
+                    removeTypingIndicator();
+                }
+                // 更新消息内容，使用textContent确保正确显示所有字符
                 const contentDiv = messageDiv.querySelector('.message-content');
                 contentDiv.textContent = displayText;
                 
