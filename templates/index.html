@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文档知识问答系统</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>文档知识问答系统</h1>
+        </header>
+        
+        <div class="main-content">
+            <div class="upload-section">
+                <h2>上传知识库文件</h2>
+                <div class="upload-area" id="dropArea">
+                    <form id="uploadForm" enctype="multipart/form-data">
+                        <input type="file" id="fileInput" name="file" accept=".pdf,.doc,.docx,.txt" hidden>
+                        <div class="upload-placeholder">
+                            <img src="/static/upload-icon.svg" alt="上传图标">
+                            <p>拖放知识库文件到此处或点击上传</p>
+                            <p class="file-types">支持的文件类型: PDF, Word, TXT</p>
+                            <button type="button" id="uploadButton" class="btn">选择文件</button>
+                        </div>
+                    </form>
+                </div>
+                <div id="uploadStatus" class="upload-status"></div>
+            </div>
+            
+            <div class="chat-section">
+                <h2>对话</h2>
+                <div class="chat-container">
+                    <div id="chatMessages" class="chat-messages">
+                        <div class="message system">
+                            <div class="message-content">您好！请上传知识库文件后开始提问。</div>
+                        </div>
+                    </div>
+                    <div class="chat-input">
+                        <textarea id="messageInput" placeholder="请输入您的问题..." disabled></textarea>
+                        <button id="sendButton" class="btn" disabled>发送</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/script.js"></script>
+</body>
+</html>

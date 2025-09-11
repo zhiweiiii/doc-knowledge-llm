@@ -1,0 +1,11 @@
+services:
+  kn:
+    build: .
+    image: kn:v1
+    container_name: kn
+    ports:
+      - "81:81"
+#    restart: always
+    environment:
+      TZ: "Asia/Shanghai"
+
