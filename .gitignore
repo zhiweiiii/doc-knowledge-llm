@@ -1,0 +1,8 @@
+.idea/*
+.idea/deployment.xml
+.idea/doc-knowledge-llm.iml
+.idea/misc.xml
+.idea/modules.xml
+.idea/vcs.xml
+.idea/inspectionProfiles/profiles_settings.xml
+__pycache__/*
