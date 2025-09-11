@@ -15,3 +15,7 @@ https://www.modelscope.cn/models/Qwen/Qwen3-0.6B/resolve/master/model.safetensor
 ````
 ./build.sh
 ````
+启动后访问：
+http://localhost:81
+
+![alt text](./static/扫码_搜索联合传播样式-标准色版.png)

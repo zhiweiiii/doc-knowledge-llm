@@ -68,54 +68,6 @@ def chat():
                             app.logger.info(f"从会话专属文件读取内容: {session_file_path}")
                     except Exception as e:
                         app.logger.error(f"读取会话专属文件错误: {str(e)}")
-                
-                # 如果会话专属文件不存在或读取失败，则尝试从原始文件中读取并创建会话专属文件
-                if os.path.exists(os.path.join(UPLOAD_FOLDER, filename)):
-                    try:
-                        file_path = os.path.join(UPLOAD_FOLDER, filename)
-                        temp_content = ""
-                        # 根据文件类型读取内容
-                        if filename.lower().endswith('.txt'):
-                            with open(file_path, 'r', encoding='utf-8') as f:
-                                temp_content = f.read()
-                        elif filename.lower().endswith('.pdf'):
-                            # 处理PDF文件
-                            pdf_reader = PyPDF2.PdfReader(file_path)
-                            for page_num in range(len(pdf_reader.pages)):
-                                page = pdf_reader.pages[page_num]
-                                temp_content += page.extract_text() + "\n"
-                        elif filename.lower().endswith(('.doc', '.docx')):
-                            # 处理Word文件
-                            doc = docx.Document(file_path)
-                            for para in doc.paragraphs:
-                                temp_content += para.text + "\n"
-                        
-                        if temp_content:
-                            file_content += temp_content + "\n\n---\n\n" # 添加分隔符区分不同文件的内容
-                            
-                            # 将文件内容保存到会话专属文件中
-                            # 生成会话文件名
-                            session_file_name = f"{filename}.content"
-                            session_file_path = get_session_file_path(session_file_name)
-                            
-                            # 写入文件内容到会话专属文件
-                            with open(session_file_path, 'w', encoding='utf-8') as f:
-                                f.write(temp_content)
-                            
-                            # 更新会话中的文件映射信息
-                            if 'file_mappings' not in session:
-                                session['file_mappings'] = {}
-                            
-                            session['file_mappings'][filename] = {
-                                'session_file': session_file_name,
-                                'original_file': filename,
-                                'upload_time': datetime.now().isoformat()
-                            }
-                            session.modified = True
-                            
-                            app.logger.info(f"文件内容已保存到会话专属文件: {session_file_path}")
-                    except Exception as e:
-                        app.logger.error(f"读取文件错误: {str(e)}")
             except Exception as e:
                 app.logger.error(f"处理文件 {filename} 时出错: {str(e)}")
         
