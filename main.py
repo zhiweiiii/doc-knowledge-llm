@@ -157,5 +157,5 @@ if __name__ == '__main__':
     qwenThread = QwenThread()
     logging.getLogger('werkzeug').disabled = True
     app.logger.setLevel(logging.INFO)
-    app.run(host="0.0.0.0", port=81)
+    app.run(host="0.0.0.0", port=80)
 
