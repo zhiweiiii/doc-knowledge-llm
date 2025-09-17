@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', function() {
         uploadStatus.className = 'upload-status';
         
         // 发送上传请求
-        fetch('/upload', {
+        fetch('/chat/upload', {
             method: 'POST',
             body: formData
         })
@@ -242,7 +242,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // 创建EventSource对象来接收服务器发送的事件
-        const eventSource = new EventSource(`/chat?${queryParams}`);
+        const eventSource = new EventSource(`/chat/message?${queryParams}`);
         
         let responseText = '';
         let messageDiv = null;
