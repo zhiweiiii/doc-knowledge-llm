@@ -5,6 +5,9 @@ services:
     container_name: kn
     ports:
       - "81:80"
+    volumes:
+      - ./model:/model  # 将主机上的model目录挂载到容器内的/model目录
+    
 #    restart: always
     environment:
       TZ: "Asia/Shanghai"
