@@ -10,7 +10,7 @@ class QwenThread(ThreadPoolExecutor):
         super(QwenThread, self).__init__(max_workers= 1,thread_name_prefix="test_",**kwargs)
         try:
             self.qwen = QwenChatbot(model_name="./model/")
-        except OSError :
+        except Exception :
             print("没有发现模型文件，自动下载文件")
             self.qwen = QwenChatbot(model_name="Qwen/Qwen3-0.6B")
         
