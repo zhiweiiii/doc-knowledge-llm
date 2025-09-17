@@ -35,11 +35,11 @@ def get_session_file_path(filename):
     return os.path.join(session_dir, filename)
 
 # 定义路由和视图函数
-@app.route('/chat')
+@app.route('/')
 def index():
     return render_template('index.html')
 
-@app.route('/chat/message', methods=['GET'])
+@app.route('/message', methods=['GET'])
 def chat():
     app.logger.info("开始")
     ### 使用url
@@ -95,7 +95,7 @@ def chat():
     app.logger.info("结束")
     return app.response_class(generate(), mimetype='text/event-stream')
 
-@app.route('/chat/upload', methods=['POST'])
+@app.route('/upload', methods=['POST'])
 def upload_file():
     if 'file' not in request.files:
         return jsonify({'error': '没有文件部分'}), 400
