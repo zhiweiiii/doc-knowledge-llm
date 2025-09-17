@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>文档知识问答系统</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <div class="container">
@@ -19,7 +19,7 @@
                     <form id="uploadForm" enctype="multipart/form-data">
                         <input type="file" id="fileInput" name="file" accept=".pdf,.doc,.docx,.txt" multiple hidden>
                         <div class="upload-placeholder">
-                            <img src="/static/upload-icon.svg" alt="上传图标">
+                            <img src="{{ url_for('static', filename='upload-icon.svg') }}" alt="上传图标">
                             <p>拖放知识库文件到此处或点击上传</p>
                             <p class="file-types">支持的文件类型: PDF, Word, TXT</p>
                             <button type="button" id="uploadButton" class="btn">选择文件</button>
@@ -46,6 +46,6 @@
         </div>
     </div>
     
-    <script src="/static/script.js"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
