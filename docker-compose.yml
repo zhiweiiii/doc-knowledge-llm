@@ -6,7 +6,7 @@ services:
     ports:
       - "81:80"
     volumes:
-      - ./model:/model  # 将主机上的model目录挂载到容器内的/model目录
+      - ./model:./model  # 双向挂载model目录，主机和容器可以相互访问和修改
     
 #    restart: always
     environment:
