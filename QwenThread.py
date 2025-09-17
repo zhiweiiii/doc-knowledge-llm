@@ -8,6 +8,8 @@ class QwenThread(ThreadPoolExecutor):
 
     def __init__(self, **kwargs):
         super(QwenThread, self).__init__(max_workers= 1,thread_name_prefix="test_",**kwargs)
+        if not os.path.exists("./model/Qwen/Qwen3-0.6B/"):
+            os.makedirs("./model/Qwen/Qwen3-0.6B/")
         try:
             self.qwen = QwenChatbot(model_name="./model/Qwen/Qwen3-0.6B/")
         except OSError :
