@@ -4,12 +4,7 @@
 
 环境：
 请先安装docker环境
-由于模型文件较大，所以请自行下载model.safetensors模型文件
-
-地址：
-https://www.modelscope.cn/models/Qwen/Qwen3-0.6B/resolve/master/model.safetensors
-
-下载后把model.safetensors放到model目录下即可
+初次使用时，会自动下载模型文件到./model下
 
 启动命令：
 ````

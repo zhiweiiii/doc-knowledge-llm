@@ -11,4 +11,8 @@ services:
 #    restart: always
     environment:
       TZ: "Asia/Shanghai"
+networks:
+  default:
+    external: true
+    name: nginx_default
 
