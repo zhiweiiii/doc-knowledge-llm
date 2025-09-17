@@ -10,9 +10,11 @@ class QwenThread(ThreadPoolExecutor):
         super(QwenThread, self).__init__(max_workers= 1,thread_name_prefix="test_",**kwargs)
         try:
             self.qwen = QwenChatbot(model_name="./model/")
-        except Exception :
+        except OSError :
             print("没有发现模型文件，自动下载文件")
-            self.qwen = QwenChatbot(model_name="Qwen/Qwen3-0.6B")
+            from modelscope.hub.snapshot_download import snapshot_download
+            model_dir = snapshot_download('Qwen/Qwen3-0.6B', cache_dir='./model/')
+            
         
         input_message = ["下面我会问你几个问题，用来测试你的准确性，请根据我提供的文档回答", "1+1等于几？"]
         for e in input_message:
