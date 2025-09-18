@@ -9,7 +9,7 @@ class QwenThread(ThreadPoolExecutor):
 
     def __init__(self, **kwargs):
         super(QwenThread, self).__init__(max_workers= 1,thread_name_prefix="test_",**kwargs)
-        if not os.path.exists("/model/Qwen/Qwen3-0.6B/model.safetensors"):
+        if not os.path.exists("/model/Qwen/Qwen3-0___6B/model.safetensors"):
             print("没有发现模型文件，自动下载文件")
             from modelscope.hub.snapshot_download import snapshot_download
             snapshot_download('Qwen/Qwen3-0.6B', cache_dir='/model/')
