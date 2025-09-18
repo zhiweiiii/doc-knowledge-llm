@@ -12,5 +12,7 @@
 ````
 启动后访问：
 http://localhost:81
+演示地址：
+http://chat.zhiwei3306.com
 
 ![alt text](./static/扫码_搜索联合传播样式-标准色版.png)

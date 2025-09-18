@@ -232,3 +232,57 @@ h2 {
         transform: translateY(-5px);
     }
 }
+
+/* 底部备案信息样式 */
+footer {
+    background-color: #fff;
+    border-top: 1px solid #ebeef5;
+    padding: 20px 0;
+    margin-top: 40px;
+}
+
+.footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    text-align: center;
+    font-size: 14px;
+}
+
+.footer-content a {
+    color: #6c757d;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.footer-content a:hover {
+    color: #409eff;
+}
+
+/* 确保页面有足够的高度 */
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.container {
+    flex: 1;
+}
+
+/* 底部内容样式补充 */
+.project-description {
+    margin-bottom: 10px;
+    color: #333;
+    font-size: 14px;
+}
+
+.github-link,
+.beian-link {
+    display: inline-block;
+    margin: 0 10px;
+}
+
+.separator {
+    color: #dcdfe6;
+    display: inline-block;
+}
