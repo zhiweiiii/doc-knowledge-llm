@@ -114,6 +114,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // 启用聊天功能
                 messageInput.disabled = false;
                 sendButton.disabled = false;
+                messageInput.placeholder = "请输入您的问题...";
                 
                 // 添加系统消息
                 const message = uploadedFiles.length === 1 
