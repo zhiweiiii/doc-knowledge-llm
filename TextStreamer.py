@@ -1,7 +1,7 @@
-from transformers import TextStreamer
+from transformers import TextStreamer as BaseTextStreamer
 
 
-class TextStreamer(TextStreamer):
+class TextStreamer(BaseTextStreamer):
     def __init__(self, tokenizer, skip_prompt: bool = True, **decode_kwargs):
         self.tokenizer = tokenizer
         self.skip_prompt = skip_prompt  # 是否打印prompt
