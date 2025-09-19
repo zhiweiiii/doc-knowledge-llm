@@ -36,7 +36,7 @@ def get_session_id():
 # 获取会话的向量数据库
 def get_vector_db():
     session_id = get_session_id()
-    print("添加文件2")
+    app.logger.info(f"创建或获取会话的向量数据库: {session_id}")
     return VectorDatabase(session_id)
 
 # 获取会话文件路径

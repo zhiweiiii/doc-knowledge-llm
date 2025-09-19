@@ -7,15 +7,20 @@ from datetime import datetime
 from safetensors.torch import save_file
 import torch
 import os
+import logging
 from transformers import AutoTokenizer, AutoModel
+
+# 配置日志
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 class VectorDatabase:
     def __init__(self, session_id):
         """初始化向量数据库"""
         self.session_id = session_id
-        print("flag1")
+    
         self.db_path = os.path.join('vector_db', session_id)
-        print("flag2")
+    
         os.makedirs(self.db_path, exist_ok=True)
         
 
@@ -23,24 +28,24 @@ class VectorDatabase:
         # 首先尝试从本地加载模型，如果不存在则下载
         local_model_path = '/model/damo/nlp_corom_sentence-embedding_english-base'
         
-        # if not os.path.exists(local_model_path):
-        #     print(f"本地模型不存在，正在下载到 {local_model_path}")
-        #     from modelscope.hub.snapshot_download import snapshot_download
-        #     local_model_path = snapshot_download('damo/nlp_corom_sentence-embedding_english-base', cache_dir='/model')
-        #     state_dict = torch.load(os.path.join(local_model_path, 'pytorch_model.bin'), map_location='cpu')
-        #     save_file(state_dict, os.path.join(local_model_path, 'model.safetensors'))
-        # else:
-        #     print(f"使用本地模型: {local_model_path}")
+        if not os.path.exists(local_model_path):
+            logger.info(f"本地模型不存在，正在下载到 {local_model_path}")
+            from modelscope.hub.snapshot_download import snapshot_download
+            local_model_path = snapshot_download('damo/nlp_corom_sentence-embedding_english-base', cache_dir='/model')
+            state_dict = torch.load(os.path.join(local_model_path, 'pytorch_model.bin'), map_location='cpu')
+            save_file(state_dict, os.path.join(local_model_path, 'model.safetensors'))
+        else:
+            logger.info(f"使用本地模型: {local_model_path}")
         
         # 使用AutoTokenizer.from_pretrained和AutoModel.from_pretrained加载模型
         
         # 加载tokenizer和模型
-        print(f"开始读取: {local_model_path}")
-        # self.tokenizer = AutoTokenizer.from_pretrained(local_model_path)
-        # self.model = AutoModel.from_pretrained(local_model_path)
-        # self.model.to('cpu')
-        # self.model.eval()
-        print(f"读取完成: {local_model_path}")
+        logger.info(f"开始读取: {local_model_path}")
+        self.tokenizer = AutoTokenizer.from_pretrained(local_model_path)
+        self.model = AutoModel.from_pretrained(local_model_path)
+        self.model.to('cpu')
+        self.model.eval()
+        logger.info(f"读取完成: {local_model_path}")
         # 创建自定义的嵌入pipeline函数
         def embedding_pipeline(text):
             # 使用tokenizer编码文本
@@ -80,7 +85,7 @@ class VectorDatabase:
         
         # 设置自定义的embedding_pipeline
         self.embedding_pipeline = embedding_pipeline
-        print(f"成功使用AutoTokenizer和AutoModel加载模型并创建嵌入pipeline")
+        logger.info(f"成功使用AutoTokenizer和AutoModel加载模型并创建嵌入pipeline")
        
         # 初始化向量存储
         self.dimension = 768  # modelscope模型的输出维度
@@ -94,7 +99,7 @@ class VectorDatabase:
         self.load()
     
     def load(self):
-        """从文件加载向量数据库"""
+        """从文件加载向量数据库，如果文件不存在则创建空数据库"""
         vectors_path = os.path.join(self.db_path, 'vectors.npy')
         chunks_path = os.path.join(self.db_path, 'document_chunks.json')
         metadata_path = os.path.join(self.db_path, 'document_metadata.json')
@@ -106,10 +111,47 @@ class VectorDatabase:
                     self.document_chunks = json.load(f)
                 with open(metadata_path, 'r', encoding='utf-8') as f:
                     self.document_metadata = json.load(f)
-                print(f"成功加载向量数据库，包含 {len(self.document_chunks)} 个文档块")
+                logger.info(f"成功加载向量数据库，包含 {len(self.document_chunks)} 个文档块")
             except Exception as e:
-                print(f"加载向量数据库失败: {str(e)}")
+                logger.error(f"加载向量数据库失败: {str(e)}")
+                # 加载失败时创建空数据库
+                self._create_empty_database(vectors_path, chunks_path, metadata_path)
+        else:
+            logger.info(f"向量数据库文件不存在，正在创建新的空数据库: {self.db_path}")
+            # 创建空数据库文件
+            self._create_empty_database(vectors_path, chunks_path, metadata_path)
     
+    def _create_empty_database(self, vectors_path, chunks_path, metadata_path):
+        """创建空的向量数据库文件"""
+        try:
+            # 保存空的向量数组
+            np.save(vectors_path, np.array([]))
+            
+            # 保存空的文档块列表
+            with open(chunks_path, 'w', encoding='utf-8') as f:
+                json.dump([], f, ensure_ascii=False, indent=2)
+            
+            # 保存空的文档元数据列表
+            with open(metadata_path, 'w', encoding='utf-8') as f:
+                json.dump([], f, ensure_ascii=False, indent=2)
+            
+            logger.info(f"成功创建空的向量数据库文件")
+            
+            # 从新创建的文件中加载数据
+            logger.info(f"正在从新创建的文件中加载向量数据库")
+            self.vectors = np.load(vectors_path)
+            with open(chunks_path, 'r', encoding='utf-8') as f:
+                self.document_chunks = json.load(f)
+            with open(metadata_path, 'r', encoding='utf-8') as f:
+                self.document_metadata = json.load(f)
+            logger.info(f"成功从新创建的文件中加载向量数据库")
+        except Exception as e:
+            logger.error(f"创建或加载空向量数据库文件失败: {str(e)}")
+            # 加载失败时初始化内存中的数据结构作为后备方案
+            self.vectors = np.array([])
+            self.document_chunks = []
+            self.document_metadata = []
+            
     def save(self):
         """保存向量数据库到文件"""
         vectors_path = os.path.join(self.db_path, 'vectors.npy')
@@ -123,12 +165,14 @@ class VectorDatabase:
                 json.dump(self.document_chunks, f, ensure_ascii=False, indent=2)
             with open(metadata_path, 'w', encoding='utf-8') as f:
                 json.dump(self.document_metadata, f, ensure_ascii=False, indent=2)
-            print(f"成功保存向量数据库，包含 {len(self.document_chunks)} 个文档块")
+            logger.info(f"成功保存向量数据库，包含 {len(self.document_chunks)} 个文档块")
         except Exception as e:
-            print(f"保存向量数据库失败: {str(e)}")
+            logger.error(f"保存向量数据库失败: {str(e)}")
     
     def split_text(self, text, chunk_size=500, chunk_overlap=50):
         """将文本分块"""
+        logger.info(f"开始文本分块，文本长度: {len(text)}, 块大小: {chunk_size}, 重叠大小: {chunk_overlap}")
+        
         chunks = []
         start = 0
         text_length = len(text)
@@ -143,17 +187,26 @@ class VectorDatabase:
                 
                 if punctuation_positions:
                     end = max(punctuation_positions) + 1  # +1 包含标点符号
+                    logger.debug(f"在句子边界处分割，调整结束位置: {end}")
             
-            chunks.append(text[start:end].strip())
-            start = end - chunk_overlap  # 设置下一个块的起始位置，包含重叠
+            chunk = text[start:end].strip()
+            chunks.append(chunk)
+            logger.debug(f"生成文本块，起始位置: {start}, 结束位置: {end}, 块长度: {len(chunk)}")
+            
+            # 确保start向前移动至少一个字符，避免无限循环
+            start = max(start + 1, end - chunk_overlap)  # 设置下一个块的起始位置，包含重叠
+            logger.debug(f"更新下一个块的起始位置: {start}")
         
+        logger.info(f"文本分块完成，共生成 {len(chunks)} 个块")
         return chunks
     
     def add_document(self, filename, content):
         """添加文档到向量数据库"""
+        logger.info(f"开始添加文档: {filename}")
         # 检查文件是否已经存在
         existing_indices = [i for i, meta in enumerate(self.document_metadata) if meta['filename'] == filename]
         if existing_indices:
+            logger.info(f"检测到文档已存在，将替换旧版本: {filename}")
             # 删除已存在的文档块
             for i in sorted(existing_indices, reverse=True):
                 del self.document_chunks[i]
@@ -168,7 +221,9 @@ class VectorDatabase:
         
         # 分块处理文档内容
         chunks = self.split_text(content)
+        logger.info(f"文档分块完成，共分成 {len(chunks)} 个块")
         if not chunks:
+            logger.warning(f"文档分块失败: {filename}")
             return False
         
         # 为每个文档块生成嵌入向量
@@ -194,6 +249,7 @@ class VectorDatabase:
         # 保存数据库
         self.save()
         
+        logger.info(f"文档添加成功: {filename}")
         return True
     
     def search(self, query, top_k=5):

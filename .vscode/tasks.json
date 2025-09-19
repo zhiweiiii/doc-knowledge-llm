@@ -1,0 +1,65 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {   
+            "label": "docker-compose up",
+            "type": "shell",
+            "command": "docker-compose",
+            "args": [
+                "up",
+                "--build"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "problemMatcher": [],
+            "detail": "启动Docker Compose服务并构建镜像"
+        },
+        {
+            "label": "快速启动 Docker Compose",
+            "type": "shell",
+            "command": "docker-compose",
+            "args": [
+                "up",
+                "--build",
+                "-d"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "problemMatcher": [],
+            "detail": "快速启动Docker Compose服务并构建镜像，在后台运行"
+        },
+        {
+            "label": "docker-compose down",
+            "type": "shell",
+            "command": "docker-compose",
+            "args": [
+                "down"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "problemMatcher": [],
+            "detail": "停止并移除Docker Compose服务"
+        },
+        {
+            "label": "查看 Docker Compose 日志",
+            "type": "shell",
+            "command": "docker-compose",
+            "args": [
+                "logs",
+                "-f"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "problemMatcher": [],
+            "detail": "查看Docker Compose服务日志"
+        }
+    ]
+}

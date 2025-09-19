@@ -1,21 +1,30 @@
 from modelscope import AutoModelForCausalLM, AutoTokenizer
 import torch
+import logging
 
 from TextStreamer import TextStreamer
+
+# 配置日志
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 
 class QwenChatbot:
     def __init__(self, model_name="Qwen/Qwen3-0.6B"):
-        print("模型加载" )
+        logger.info(f"开始加载模型: {model_name}")
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.model = AutoModelForCausalLM.from_pretrained(model_name)
         self.history = []
         self.streamer = TextStreamer(self.tokenizer, skip_prompt=True, skip_special_tokens=True)
-        print("模型加载完成")
+        logger.info("模型加载完成")
+        logger.debug(f"初始化后聊天上下文为空，历史记录长度: {len(self.history)}, 历史记录内容: {self.history}")
 
     def generate_response(self, user_input):
-        print("输入："+user_input)
+        logger.info(f"接收用户输入，长度: {len(user_input)} 字符")
+        logger.debug(f"当前上下文历史记录长度: {len(self.history)} 条消息，历史记录内容: {self._format_history(self.history)}")
+        
         messages = self.history + [{"role": "user", "content": user_input}]
+        logger.debug(f"构建完整消息列表，总长度: {len(messages)} 条消息")
 
         text = self.tokenizer.apply_chat_template(
             messages,
@@ -23,18 +32,30 @@ class QwenChatbot:
             add_generation_prompt=True,
             enable_thinking=False
         )
+        logger.debug(f"应用聊天模板后文本长度: {len(text)} 字符")
 
         inputs = self.tokenizer(text, return_tensors="pt")
-        response_ids = self.model.generate(**inputs, max_new_tokens=32768,streamer=self.streamer)[0][len(inputs.input_ids[0]):].tolist()
+        logger.debug(f"Tokenize后输入形状: {inputs.input_ids.shape}")
+        
+        logger.info("开始生成响应")
+        response_ids = self.model.generate(**inputs, max_new_tokens=32768, streamer=self.streamer)[0][len(inputs.input_ids[0]):].tolist()
         response = self.tokenizer.decode(response_ids, skip_special_tokens=True)
+        
+        # 更新历史记录
         self.history.append({"role": "user", "content": user_input})
         self.history.append({"role": "assistant", "content": response})
-        print("输出：" + response)
+        
+        logger.info(f"响应生成完成，响应长度: {len(response)} 字符")
+        logger.debug(f"更新后上下文历史记录长度: {len(self.history)} 条消息，历史记录内容: {self._format_history(self.history)}")
+        
         return response
         
     def stream_generate_response(self, user_input):
-        print("输入："+user_input)
+        logger.info(f"开始流式生成响应，用户输入长度: {len(user_input)} 字符")
+        logger.debug(f"当前上下文历史记录长度: {len(self.history)} 条消息，历史记录内容: {self._format_history(self.history)}")
+        
         messages = self.history + [{"role": "user", "content": user_input}]
+        logger.debug(f"构建完整消息列表，总长度: {len(messages)} 条消息")
 
         text = self.tokenizer.apply_chat_template(
             messages,
@@ -42,8 +63,10 @@ class QwenChatbot:
             add_generation_prompt=True,
             enable_thinking=False
         )
+        logger.debug(f"应用聊天模板后文本长度: {len(text)} 字符")
 
         inputs = self.tokenizer(text, return_tensors="pt")
+        logger.debug(f"Tokenize后输入形状: {inputs.input_ids.shape}")
         
         # 创建自定义的流式输出收集器，确保移除多余格式和前缀
         class StreamingGenerator:
@@ -122,5 +145,24 @@ class QwenChatbot:
         # 更新历史记录
         self.history.append({"role": "user", "content": user_input})
         self.history.append({"role": "assistant", "content": full_response})
-        print("输出：" + full_response)
-        return full_response  # 修复未定义变量错误，返回完整响应
+        
+        logger.info(f"流式响应生成完成，完整响应长度: {len(full_response)} 字符")
+        logger.info(f"更新后上下文历史记录长度: {len(self.history)} 条消息，历史记录内容: {self._format_history(self.history)}")
+        
+        return full_response
+        
+    def _format_history(self, history, max_content_length=100):
+        """格式化历史记录，避免日志过于冗长"""
+        if not history:
+            return "[]"
+        
+        formatted = []
+        for msg in history:
+            role = msg.get('role', 'unknown')
+            content = msg.get('content', '')
+            # 截断过长的内容
+            if len(content) > max_content_length:
+                content = content[:max_content_length] + "..."
+            formatted.append(f"{{'role': '{role}', 'content': '{content}'}}")
+        
+        return "[" + ", ".join(formatted) + "]"

@@ -16,7 +16,7 @@ class QwenThread(ThreadPoolExecutor):
         self.qwen = QwenChatbot(model_name="/model/Qwen/Qwen3-0___6B/")
        
         
-        input_message = ["下面我会问你几个问题，用来测试你的准确性，请根据我提供的文档回答", "1+1等于几？"]
+        input_message = ["测试", "1+1等于几？"]
         for e in input_message:
             self.qwen.generate_response(e)
 
