@@ -5,7 +5,7 @@ import logging
 from TextStreamer import TextStreamer
 
 # 配置日志
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 
@@ -14,16 +14,23 @@ class QwenChatbot:
         logger.info(f"开始加载模型: {model_name}")
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.model = AutoModelForCausalLM.from_pretrained(model_name)
-        self.history = []
+        self.user_histories = {}
         self.streamer = TextStreamer(self.tokenizer, skip_prompt=True, skip_special_tokens=True)
         logger.info("模型加载完成")
-        logger.debug(f"初始化后聊天上下文为空，历史记录长度: {len(self.history)}, 历史记录内容: {self.history}")
+        logger.debug(f"初始化后用户历史记录字典为空，包含 {len(self.user_histories)} 个用户记录")
 
-    def generate_response(self, user_input):
-        logger.info(f"接收用户输入，长度: {len(user_input)} 字符")
-        logger.debug(f"当前上下文历史记录长度: {len(self.history)} 条消息，历史记录内容: {self._format_history(self.history)}")
+    def generate_response(self, user_input, user_id="default"):
+        logger.info(f"接收用户 [ID: {user_id}] 输入，长度: {len(user_input)} 字符")
         
-        messages = self.history + [{"role": "user", "content": user_input}]
+        # 获取用户历史记录，如果不存在则创建
+        if user_id not in self.user_histories:
+            self.user_histories[user_id] = []
+            logger.debug(f"为用户 [ID: {user_id}] 创建新的历史记录")
+        
+        user_history = self.user_histories[user_id]
+        logger.debug(f"当前用户 [ID: {user_id}] 上下文历史记录长度: {len(user_history)} 条消息")
+        
+        messages = user_history + [{"role": "user", "content": user_input}]
         logger.debug(f"构建完整消息列表，总长度: {len(messages)} 条消息")
 
         text = self.tokenizer.apply_chat_template(
@@ -37,24 +44,31 @@ class QwenChatbot:
         inputs = self.tokenizer(text, return_tensors="pt")
         logger.debug(f"Tokenize后输入形状: {inputs.input_ids.shape}")
         
-        logger.info("开始生成响应")
+        logger.info(f"开始为用户 [ID: {user_id}] 生成响应")
         response_ids = self.model.generate(**inputs, max_new_tokens=32768, streamer=self.streamer)[0][len(inputs.input_ids[0]):].tolist()
         response = self.tokenizer.decode(response_ids, skip_special_tokens=True)
         
-        # 更新历史记录
-        self.history.append({"role": "user", "content": user_input})
-        self.history.append({"role": "assistant", "content": response})
+        # 更新用户历史记录
+        user_history.append({"role": "user", "content": user_input})
+        user_history.append({"role": "assistant", "content": response})
         
         logger.info(f"响应生成完成，响应长度: {len(response)} 字符")
-        logger.debug(f"更新后上下文历史记录长度: {len(self.history)} 条消息，历史记录内容: {self._format_history(self.history)}")
+        logger.debug(f"更新后用户 [ID: {user_id}] 上下文历史记录长度: {len(user_history)} 条消息")
+        logger.debug(f"当前系统中共有 {len(self.user_histories)} 个用户的独立历史记录")
         
         return response
         
-    def stream_generate_response(self, user_input):
-        logger.info(f"开始流式生成响应，用户输入长度: {len(user_input)} 字符")
-        logger.debug(f"当前上下文历史记录长度: {len(self.history)} 条消息，历史记录内容: {self._format_history(self.history)}")
+    def stream_generate_response(self, user_input, user_id="default"):
+        logger.info(f"开始为用户 [ID: {user_id}] 流式生成响应，用户输入长度: {len(user_input)} 字符")
         
-        messages = self.history + [{"role": "user", "content": user_input}]
+        # 获取用户历史记录，如果不存在则创建
+        if user_id not in self.user_histories:
+            self.user_histories[user_id] = []
+            logger.debug(f"为用户 [ID: {user_id}] 创建新的历史记录")
+        
+        user_history = self.user_histories[user_id]
+        
+        messages = user_history + [{"role": "user", "content": user_input}]
         logger.debug(f"构建完整消息列表，总长度: {len(messages)} 条消息")
 
         text = self.tokenizer.apply_chat_template(
@@ -142,16 +156,17 @@ class QwenChatbot:
         # 等待生成线程完成
         thread.join()
         
-        # 更新历史记录
-        self.history.append({"role": "user", "content": user_input})
-        self.history.append({"role": "assistant", "content": full_response})
+        # 更新用户历史记录
+        user_history.append({"role": "user", "content": user_input})
+        user_history.append({"role": "assistant", "content": full_response})
         
         logger.info(f"流式响应生成完成，完整响应长度: {len(full_response)} 字符")
-        logger.info(f"更新后上下文历史记录长度: {len(self.history)} 条消息，历史记录内容: {self._format_history(self.history)}")
-        
+        logger.info(f"更新后用户 [ID: {user_id}] 上下文历史记录长度: {len(user_history)} 条消息，历史记录内容: {self._format_history(user_history)}")
+        logger.debug(f"当前系统中共有 {len(self.user_histories)} 个用户的独立历史记录")
+
         return full_response
         
-    def _format_history(self, history, max_content_length=100):
+    def _format_history(self, history, max_content_length=10000):
         """格式化历史记录，避免日志过于冗长"""
         if not history:
             return "[]"
@@ -166,3 +181,22 @@ class QwenChatbot:
             formatted.append(f"{{'role': '{role}', 'content': '{content}'}}")
         
         return "[" + ", ".join(formatted) + "]"
+        
+    def clear_user_history(self, user_id="default"):
+        """清除指定用户的历史记录"""
+        if user_id in self.user_histories:
+            self.user_histories[user_id] = []
+            logger.info(f"已清除用户 [ID: {user_id}] 的历史记录")
+            return True
+        logger.warning(f"用户 [ID: {user_id}] 不存在")
+        return False
+        
+    def get_user_history_length(self, user_id="default"):
+        """获取指定用户的历史记录长度"""
+        if user_id in self.user_histories:
+            return len(self.user_histories[user_id])
+        return 0
+        
+    def list_users(self):
+        """列出所有有历史记录的用户ID"""
+        return list(self.user_histories.keys())

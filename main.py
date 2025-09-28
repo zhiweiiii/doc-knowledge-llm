@@ -2,7 +2,6 @@ import logging
 import os
 import uuid
 import json
-import logging
 from datetime import datetime
 
 from flask import Flask, request, jsonify, render_template, send_from_directory, session
@@ -14,6 +13,9 @@ from VectorDB import VectorDatabase
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.secret_key = 'doc_knowledge_llm_secret_key'  # 设置密钥，用于会话加密
+
+# 设置Flask应用的日志级别为DEBUG
+app.logger.setLevel(logging.DEBUG)
 
 # 创建上传文件的目录
 UPLOAD_FOLDER = 'uploads'
@@ -33,11 +35,15 @@ def get_session_id():
         session['session_id'] = str(uuid.uuid4())
     return session['session_id']
 
+# 在应用启动时就初始化全局共用的VectorDatabase实例
+app.logger.info(f"应用启动，开始初始化全局共用的向量数据库")
+vector_db = VectorDatabase()
+app.logger.info(f"全局共用向量数据库初始化完成")
+
 # 获取会话的向量数据库
 def get_vector_db():
-    session_id = get_session_id()
-    app.logger.info(f"创建或获取会话的向量数据库: {session_id}")
-    return VectorDatabase(session_id)
+    app.logger.info(f"直接调用已初始化的全局共用向量数据库")
+    return vector_db
 
 # 获取会话文件路径
 def get_session_file_path(filename):
@@ -54,9 +60,6 @@ def init_qwen_thread():
 # 定义路由和视图函数
 @app.route('/')
 def index():
-    # 确保QwenThread初始化
-    if 'qwenThread' not in globals():
-        init_qwen_thread()
     return render_template('index.html')
 
 @app.route('/message', methods=['GET'])
@@ -72,50 +75,29 @@ def chat():
     if 'file_mappings' in session and len(session['file_mappings']) > 0:
         try:
             # 获取向量数据库
-            vector_db = get_vector_db()
             
             # 搜索相关文档块
-            search_results = vector_db.search(text, top_k=5)
+            session_id = get_session_id()
+            search_results = vector_db.search(session_id, text, top_k=5)
             
             if search_results:
                 # 构建相关内容
                 for i, result in enumerate(search_results):
-                    relevant_content += f"文档片段 {i+1}（来自 {result['metadata']['filename']}）：\n"
                     relevant_content += result['content'] + "\n\n"
-                
                 # 将相关内容添加到问题中
                 text = f"基于以下相关知识库内容回答问题：\n\n{relevant_content}\n\n问题：{text}"
         except Exception as e:
             app.logger.error(f"向量数据库检索错误: {str(e)}")
             
-            # 回退到原始的全部文件内容方式
-            file_content = ""
-            file_names = list(session['file_mappings'].keys())
-            for filename in file_names:
-                try:
-                    if 'file_mappings' in session and filename in session['file_mappings']:
-                        try:
-                            session_file_name = session['file_mappings'][filename]['session_file']
-                            session_file_path = get_session_file_path(session_file_name)
-                            
-                            if os.path.exists(session_file_path):
-                                with open(session_file_path, 'r', encoding='utf-8') as f:
-                                    file_content += f.read() + "\n\n---\n\n"
-                        except Exception as inner_e:
-                            app.logger.error(f"读取会话专属文件错误: {str(inner_e)}")
-                except Exception as inner_e:
-                    app.logger.error(f"处理文件 {filename} 时出错: {str(inner_e)}")
-            
-            if file_content:
-                file_content = file_content.rstrip("\n---\n")
-                text = f"基于以下多个知识库文件内容综合回答问题：\n\n{file_content}\n\n问题：{text}"
-    
     # 使用SSE（Server-Sent Events）实现流式响应，返回纯文本格式
+    # 在请求上下文有效时获取用户ID
+    user_id = get_session_id()
+    
     def generate():
         try:  
             # 然后发送实际的流式响应，直接返回纯文本内容
             # 确保中文和特殊字符正确编码
-            for chunk in qwenThread.stream_chat(text):
+            for chunk in qwenThread.stream_chat(text, user_id=user_id):
                 # 确保内容是字符串并正确编码
                 chunk_str = str(chunk) if chunk else ''
                 yield f"data: {chunk_str}\n\n"
@@ -183,9 +165,9 @@ def upload_file():
                 
                 # 将文档添加到向量数据库
                 try:
-                    app.logger.error(f"添加文件")
-                    vector_db = get_vector_db()
-                    vector_db.add_document(file.filename, file_content)
+                    app.logger.info(f"添加文件")
+                    session_id = get_session_id()
+                    vector_db.add_document(session_id, file.filename, file_content)
                     app.logger.info(f"文件已添加到向量数据库: {file.filename}")
                 except Exception as e:
                     app.logger.error(f"添加文件到向量数据库失败: {str(e)}")
@@ -197,7 +179,5 @@ def upload_file():
 if __name__ == '__main__':
     # 初始化QwenThread
     init_qwen_thread()
-    logging.getLogger('werkzeug').disabled = True
-    app.logger.setLevel(logging.INFO)
     app.run(host="0.0.0.0", port=80)
 

@@ -21,12 +21,12 @@ class QwenThread(ThreadPoolExecutor):
             self.qwen.generate_response(e)
 
     # 流式对话接口
-    def stream_chat(self, text):
+    def stream_chat(self, text, user_id):
         # 创建一个队列来接收流式输出
         result_queue = queue.Queue()
         
-        # 提交任务到线程池
-        self.submit(self.stream_infer, text, result_queue)
+        # 提交任务到线程池，传入user_id
+        self.submit(self.stream_infer, text, result_queue, user_id)
         
         # 从队列中读取结果并yield
         while True:
@@ -37,19 +37,19 @@ class QwenThread(ThreadPoolExecutor):
             result_queue.task_done()
 
     # 外部对话接口（保持兼容性）
-    def chat(self,text):
-        result =self.submit(self.infer, text)
+    def chat(self, text, user_id="default"):
+        result = self.submit(self.infer, text, user_id)
         return result.result()
 
-    def infer(self, text):
-        result_str = self.qwen.generate_response(text)
+    def infer(self, text, user_id="default"):
+        result_str = self.qwen.generate_response(text, user_id)
         return result_str
         
     # 流式推理方法
-    def stream_infer(self, text, result_queue):
+    def stream_infer(self, text, result_queue, user_id="default"):
         try:
-            # 调用QwenChatbot的流式生成方法
-            for chunk in self.qwen.stream_generate_response(text):
+            # 调用QwenChatbot的流式生成方法，并传入user_id
+            for chunk in self.qwen.stream_generate_response(text, user_id):
                 if chunk:
                     result_queue.put(chunk)
         finally:
