@@ -97,43 +97,122 @@ document.addEventListener('DOMContentLoaded', function() {
         uploadStatus.textContent = `上传中: ${file.name}`;
         uploadStatus.className = 'upload-status';
         
+        // 获取进度条相关元素
+        const progressContainer = document.getElementById('progressContainer');
+        const progressFilename = document.getElementById('progressFilename');
+        const progressText = document.getElementById('progressText');
+        const progressFill = document.getElementById('progressFill');
+        const progressDetails = document.getElementById('progressDetails');
+        
+        // 显示进度条
+        progressContainer.classList.remove('hidden');
+        progressFilename.textContent = file.name;
+        progressText.textContent = '0%';
+        progressFill.style.width = '0%';
+        progressDetails.textContent = '准备上传...';
+        
+        // 重置上传状态
+        uploadStatus.textContent = '';
+        uploadStatus.className = 'upload-status';
+        
         // 发送上传请求
         fetch('/upload', {
             method: 'POST',
-            body: formData
+            body: formData,
+            credentials: 'same-origin' // 包含cookie以确保会话一致性
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // 添加到已上传文件列表
-                uploadedFiles.push(data.filename);
-                
-                uploadStatus.textContent = `知识库文件 ${data.filename} 上传成功！`;
-                uploadStatus.className = 'upload-status success';
-                
-                // 启用聊天功能
-                messageInput.disabled = false;
-                sendButton.disabled = false;
-                messageInput.placeholder = "请输入您的问题...";
-                
-                // 添加系统消息
-                const message = uploadedFiles.length === 1 
-                    ? `知识库文件 ${data.filename} 已上传，您可以开始提问了。` 
-                    : `知识库文件 ${data.filename} 已上传，当前共上传了 ${uploadedFiles.length} 个文件。`;
-                addMessage('system', message);
-                
-                // 3秒后清除上传状态
-                setTimeout(() => {
-                    uploadStatus.textContent = '';
-                }, 3000);
-            } else {
-                uploadStatus.textContent = `上传失败: ${data.error || '未知错误'}`;
-                uploadStatus.className = 'upload-status error';
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('上传失败: ' + response.statusText);
             }
+            
+            // 获取读取器以处理流式响应
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            
+            // 处理流式响应的函数
+            function readStream() {
+                return reader.read().then(({ done, value }) => {
+                    if (done) {
+                        return;
+                    }
+                    
+                    // 解码数据
+                    const chunk = decoder.decode(value, { stream: true });
+                    // 分割多行数据
+                    const lines = chunk.split('\n\n');
+                    
+                    lines.forEach(line => {
+                        if (line.startsWith('data:')) {
+                            try {
+                                // 提取JSON数据
+                                const dataStr = line.substring(5).trim();
+                                if (dataStr) {
+                                    const data = JSON.parse(dataStr);
+                                    
+                                    // 更新进度条
+                                    if (data.progress !== undefined) {
+                                        const progress = Math.min(data.progress, 100);
+                                        // 保留两位小数
+                                        const formattedProgress = progress.toFixed(2);
+                                        progressText.textContent = `${formattedProgress}%`;
+                                        progressFill.style.width = `${formattedProgress}%`;
+                                    }
+                                    
+                                    // 更新详细信息
+                                    if (data.status === 'processing') {
+                                        if (data.current_batch !== undefined && data.total_batches !== undefined) {
+                                            progressDetails.textContent = `处理中: 批次 ${data.current_batch}/${data.total_batches}`;
+                                        } else {
+                                            progressDetails.textContent = '处理中...';
+                                        }
+                                    } else if (data.status === 'completed') {
+                                        progressDetails.textContent = '处理完成！';
+                                        
+                                        // 添加到已上传文件列表
+                                        uploadedFiles.push(data.filename);
+                                        
+                                        uploadStatus.textContent = `知识库文件 ${data.filename} 上传成功！`;
+                                        uploadStatus.className = 'upload-status success';
+                                        
+                                        // 启用聊天功能
+                                        messageInput.disabled = false;
+                                        sendButton.disabled = false;
+                                        messageInput.placeholder = "请输入您的问题...";
+                                        
+                                        // 添加系统消息
+                                        const message = uploadedFiles.length === 1 
+                                            ? `知识库文件 ${data.filename} 已上传，您可以开始提问了。` 
+                                            : `知识库文件 ${data.filename} 已上传，当前共上传了 ${uploadedFiles.length} 个文件。`;
+                                        addMessage('system', message);
+                                        
+                                        // 3秒后清除上传状态
+                                        setTimeout(() => {
+                                            uploadStatus.textContent = '';
+                                            progressContainer.classList.add('hidden');
+                                        }, 3000);
+                                    } else if (data.status === 'error') {
+                                        progressDetails.textContent = `错误: ${data.message || '未知错误'}`;
+                                        uploadStatus.textContent = `上传失败: ${data.message || '未知错误'}`;
+                                        uploadStatus.className = 'upload-status error';
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('解析进度数据失败:', e);
+                            }
+                        }
+                    });
+                    
+                    return readStream();
+                });
+            }
+            
+            return readStream();
         })
         .catch(error => {
             console.error('Error:', error);
-            uploadStatus.textContent = '上传过程中发生错误';
+            progressDetails.textContent = `错误: ${error.message}`;
+            uploadStatus.textContent = `上传失败: ${error.message}`;
             uploadStatus.className = 'upload-status error';
         });
     }
@@ -225,6 +304,7 @@ document.addEventListener('DOMContentLoaded', function() {
         cleanedText = cleanedText.replace(/^\s*回复:/i, '').trim();
         cleanedText = cleanedText.replace(/^\s*user:/i, '').trim();
         cleanedText = cleanedText.replace(/^\s*user/i, '').trim();
+        cleanedText = cleanedText.replace(/^\s*system/i, '').trim();
         
         // 处理可能的转义字符，但保留原始字符编码
         cleanedText = cleanedText.replace(/\\n/g, ' ');

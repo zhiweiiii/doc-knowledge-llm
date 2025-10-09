@@ -23,10 +23,23 @@
                             <p>拖放知识库文件到此处或点击上传</p>
                             <p class="file-types">支持的文件类型: PDF, Word, TXT</p>
                             <button type="button" id="uploadButton" class="btn">选择文件</button>
-                        </div>
-                    </form>
                 </div>
-                <div id="uploadStatus" class="upload-status"></div>
+            </form>
+        </div>
+        <div id="uploadStatus" class="upload-status"></div>
+        <!-- 进度条 -->
+        <div id="progressContainer" class="progress-container hidden">
+            <div class="progress-header">
+                <span id="progressFilename"></span>
+                <span id="progressText">0%</span>
+            </div>
+            <div class="progress-bar">
+                <div id="progressFill" class="progress-fill"></div>
+            </div>
+            <div class="progress-details">
+                <span id="progressDetails">准备处理...</span>
+            </div>
+        </div>
             </div>
             
             <div class="chat-section">
