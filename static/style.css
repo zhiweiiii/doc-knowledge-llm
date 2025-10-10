@@ -301,6 +301,58 @@ footer {
     color: #409eff;
 }
 
+/* 示例数据区域样式 */
+.sample-data-section {
+    margin-top: 20px;
+    text-align: center;
+    padding: 15px;
+    background-color: #f0f9ff;
+    border-radius: 8px;
+    border: 1px solid #bae7ff;
+}
+
+.btn-primary {
+    background-color: #67c23a;
+    margin-bottom: 10px;
+    margin-right: 10px;
+}
+
+.btn-primary:hover {
+    background-color: #85ce61;
+}
+
+.btn-primary:disabled,
+.btn-primary.used {
+    background-color: #c0c4cc;
+    cursor: not-allowed;
+}
+
+/* 次要按钮样式 - 用于下载示例数据 */
+.btn-secondary {
+    background-color: #409eff;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+    text-decoration: none;
+    display: inline-block;
+    margin-bottom: 10px;
+}
+
+.btn-secondary:hover {
+    background-color: #66b1ff;
+    color: white;
+}
+
+.sample-data-info {
+    font-size: 12px;
+    color: #409eff;
+    margin: 0;
+}
+
 /* 确保页面有足够的高度 */
 body {
     display: flex;

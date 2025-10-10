@@ -8,9 +8,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const chatMessages = document.getElementById('chatMessages');
     const messageInput = document.getElementById('messageInput');
     const sendButton = document.getElementById('sendButton');
+    const useSampleDataButton = document.getElementById('useSampleDataButton');
     
     let uploadedFiles = []; // 存储所有上传的文件名
     let isWaitingForResponse = false;
+    let useSampleData = false; // 标记是否使用示例数据
     
     // 文件上传相关事件
     uploadButton.addEventListener('click', (e) => {
@@ -217,6 +219,25 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // 示例数据按钮点击事件
+    useSampleDataButton.addEventListener('click', () => {
+        // 启用聊天功能
+        messageInput.disabled = false;
+        sendButton.disabled = false;
+        messageInput.placeholder = "请输入您的问题...";
+        
+        // 设置使用示例数据标记
+        useSampleData = true;
+        
+        // 添加系统消息
+        addMessage('system', '已切换到示例数据库模式，您可以开始提问了。');
+        
+        // 更新按钮样式和文本
+        useSampleDataButton.textContent = '已使用示例数据';
+        useSampleDataButton.disabled = true;
+        useSampleDataButton.classList.add('used');
+    });
+    
     // 聊天相关功能
     sendButton.addEventListener('click', sendMessage);
     
@@ -317,13 +338,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function fetchChatResponse(message) {
-        // 只传递用户消息，文件信息由服务器从会话中获取
+        // 总是调用同一个接口，通过参数控制是否使用示例数据库
+        const endpoint = '/message';
+        
+        // 传递用户消息和是否使用示例数据库的参数
         const queryParams = new URLSearchParams({
-            text: message
+            text: message,
+            use_sample_data: useSampleData
         });
         
         // 创建EventSource对象来接收服务器发送的事件
-        const eventSource = new EventSource(`/message?${queryParams}`);
+        const eventSource = new EventSource(`${endpoint}?${queryParams}`);
         
         let responseText = '';
         let messageDiv = null;

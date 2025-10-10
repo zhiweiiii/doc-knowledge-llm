@@ -3,6 +3,7 @@ import os
 import uuid
 import json
 from datetime import datetime
+import logging
 
 from flask import Flask, request, jsonify, render_template, send_from_directory, session, Response
 import PyPDF2
@@ -16,6 +17,8 @@ app.secret_key = 'doc_knowledge_llm_secret_key'  # 设置密钥，用于会话�
 
 # 设置Flask应用的日志级别为DEBUG
 app.logger.setLevel(logging.DEBUG)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # 创建上传文件的目录
 UPLOAD_FOLDER = 'uploads'
@@ -29,11 +32,40 @@ os.makedirs(SESSION_FILES_FOLDER, exist_ok=True)
 VECTOR_DB_FOLDER = 'vector_db'
 os.makedirs(VECTOR_DB_FOLDER, exist_ok=True)
 
+# 示例数据库的会话ID
+SAMPLE_DB_SESSION_ID = 'sample_db'
+
 # 生成会话ID
 def get_session_id():
     if 'session_id' not in session:
         session['session_id'] = str(uuid.uuid4())
     return session['session_id']
+
+# 在应用启动时处理示例文件
+def process_sample_file():
+    """处理data/test.pdf文件生成示例向量数据库"""
+    sample_file_path = './data/test.pdf'
+    if os.path.exists(sample_file_path):
+        # 检查示例数据库是否已经存在
+        sample_db_path = os.path.join(VECTOR_DB_FOLDER, SAMPLE_DB_SESSION_ID)
+        if not os.path.exists(sample_db_path):
+            try:
+                logger.info(f"开始处理示例文件: {sample_file_path}")
+                
+                # 读取PDF内容
+                with open(sample_file_path, 'rb') as file:
+                    pdf_reader = PyPDF2.PdfReader(file)
+                    text_content = ""
+                    for page_num in range(len(pdf_reader.pages)):
+                        page = pdf_reader.pages[page_num]
+                        text_content += page.extract_text() or ""
+                        text_content += "\n"
+                
+                # 添加到向量数据库
+                vector_db.add_document(SAMPLE_DB_SESSION_ID, 'test.pdf', text_content, None)
+                logger.info(f"示例文件处理完成，生成向量数据库成功")
+            except Exception as e:
+                logger.error(f"处理示例文件时出错: {str(e)}")
 
 # 在应用启动时就初始化全局共用的VectorDatabase实例
 app.logger.info(f"应用启动，开始初始化全局共用的向量数据库")
@@ -57,36 +89,39 @@ def init_qwen_thread():
     global qwenThread
     qwenThread = QwenThread()
 
-# 定义路由和视图函数
-@app.route('/')
-def index():
-    return render_template('index.html')
-
+# 合并后的对话接口，通过参数控制是否使用示例数据库
 @app.route('/message', methods=['GET'])
 def chat():
-    app.logger.info("开始")
-    ### 使用url
+    app.logger.info("开始处理对话请求")
     text = request.values.get('text')
     if text is None:
         return "请输入信息"
     
+    # 获取use_sample_data参数，默认为false
+    use_sample_data = request.values.get('use_sample_data', 'false').lower() == 'true'
+    
     # 使用向量数据库检索相关文档内容
     relevant_content = ""
-    if 'file_mappings' in session and len(session['file_mappings']) > 0:
-        try:
-            # 获取向量数据库
-            
-            # 搜索相关文档块
+    try:
+        if use_sample_data:
+            app.logger.info("使用示例数据库进行对话")
+            # 使用示例数据库会话ID
+            session_id = SAMPLE_DB_SESSION_ID
+        else:
+            # 使用用户自己的会话ID
             session_id = get_session_id()
-            search_results = vector_db.search(session_id, text, top_k=5)
             
-            if search_results:
-                # 构建相关内容
-                for i, result in enumerate(search_results):
-                    relevant_content += result['content'] + "\n\n"
-        except Exception as e:
-            app.logger.error(f"向量数据库检索错误: {str(e)}")
-            # 即使检索失败，也继续处理用户问题，只是没有知识库支持
+        # 搜索相关文档块
+        search_results = vector_db.search(session_id, text, top_k=5)
+        
+        if search_results:
+            # 构建相关内容
+            for i, result in enumerate(search_results):
+                app.logger.error(f"数据库检索信息: {str(result['content'] )}")
+                relevant_content += result['content'] + "\n\n"
+    except Exception as e:
+        app.logger.error(f"向量数据库检索错误: {str(e)}")
+        # 即使检索失败，也继续处理用户问题，只是没有知识库支持
     
     # 使用SSE（Server-Sent Events）实现流式响应，返回纯文本格式
     # 在请求上下文有效时获取用户ID
@@ -106,8 +141,9 @@ def chat():
             # 返回错误消息
             error_str = str(e) if e else '未知错误'
             yield f"data: 发生错误: {error_str}\n\n"
-    app.logger.info("结束")
+    app.logger.info("对话处理结束")
     return app.response_class(generate(), mimetype='text/event-stream')
+
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -254,8 +290,31 @@ def upload_file():
         app.logger.error(f"解析文件错误: {str(e)}")
         return jsonify({'success': False, 'error': str(e)})
 
+
+# 定义路由和视图函数
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/download_sample')
+def download_sample():
+    """提供示例数据文件下载"""
+    sample_file_path = './data/test.pdf'
+    if not os.path.exists(sample_file_path):
+        app.logger.error(f"示例文件不存在: {sample_file_path}")
+        return "示例文件不存在", 404
+    
+    try:
+        # 使用send_file提供文件下载
+        return send_from_directory('.', 'data/test.pdf', as_attachment=True)
+    except Exception as e:
+        app.logger.error(f"下载示例文件时出错: {str(e)}")
+        return f"下载失败: {str(e)}", 500
+
 if __name__ == '__main__':
     # 初始化QwenThread
     init_qwen_thread()
+    # 处理示例文件
+    process_sample_file()
     app.run(host="0.0.0.0", port=80)
 
