@@ -198,8 +198,12 @@ class VectorDatabase:
         text_length = len(text)
         
         while start < text_length:
-            end = min(start + chunk_size, text_length)
+            # 如果剩余文本长度小于等于chunk_overlap，则直接返回整段
+            if text_length - start <= chunk_overlap:
+                chunks.append(text[start:text_length].strip())
+                break
             
+            end = min(start + chunk_size, text_length)
             # 尝试在句子边界处分割
             if end < text_length:
                 punctuation_positions = [text.rfind(p, start, end) for p in ['.', '?', '!', '\n']]
@@ -210,7 +214,7 @@ class VectorDatabase:
             
             chunks.append(text[start:end].strip())
             start = max(start + 1, end - chunk_overlap)
-        
+        logger.info(f"分割数据:{str(chunks)}")
         return chunks
     
     def add_document(self, session_id, filename, content, progress_callback=None):

@@ -35,12 +35,6 @@ os.makedirs(VECTOR_DB_FOLDER, exist_ok=True)
 # 示例数据库的会话ID
 SAMPLE_DB_SESSION_ID = 'sample_db'
 
-# 生成会话ID
-def get_session_id():
-    if 'session_id' not in session:
-        session['session_id'] = str(uuid.uuid4())
-    return session['session_id']
-
 # 在应用启动时处理示例文件
 def process_sample_file():
     """处理data/test.pdf文件生成示例向量数据库"""
@@ -78,8 +72,7 @@ def get_vector_db():
     return vector_db
 
 # 获取会话文件路径
-def get_session_file_path(filename):
-    session_id = get_session_id()
+def get_session_file_path(filename, session_id=None):
     session_dir = os.path.join(SESSION_FILES_FOLDER, session_id)
     os.makedirs(session_dir, exist_ok=True)
     return os.path.join(session_dir, filename)
@@ -100,19 +93,19 @@ def chat():
     # 获取use_sample_data参数，默认为false
     use_sample_data = request.values.get('use_sample_data', 'false').lower() == 'true'
     
+    # 获取前端传递的会话ID
+    session_id = request.values.get('session_id')
+    
     # 使用向量数据库检索相关文档内容
     relevant_content = ""
     try:
         if use_sample_data:
             app.logger.info("使用示例数据库进行对话")
             # 使用示例数据库会话ID
-            session_id = SAMPLE_DB_SESSION_ID
+            search_results = vector_db.search(SAMPLE_DB_SESSION_ID, text, top_k=5)
         else:
-            # 使用用户自己的会话ID
-            session_id = get_session_id()
-            
-        # 搜索相关文档块
-        search_results = vector_db.search(session_id, text, top_k=5)
+            # 搜索相关文档块
+            search_results = vector_db.search(session_id, text, top_k=5)
         
         if search_results:
             # 构建相关内容
@@ -123,16 +116,12 @@ def chat():
         app.logger.error(f"向量数据库检索错误: {str(e)}")
         # 即使检索失败，也继续处理用户问题，只是没有知识库支持
     
-    # 使用SSE（Server-Sent Events）实现流式响应，返回纯文本格式
-    # 在请求上下文有效时获取用户ID
-    user_id = get_session_id()
-    
     def generate():
         try:  
             # 然后发送实际的流式响应，直接返回纯文本内容
             # 确保中文和特殊字符正确编码
             # 使用新方法，将知识库内容和问题分开传递
-            for chunk in qwenThread.stream_chat_with_knowledge(text, relevant_content, user_id=user_id):
+            for chunk in qwenThread.stream_chat_with_knowledge(text, relevant_content, user_id=session_id):
                 # 确保内容是字符串并正确编码
                 chunk_str = str(chunk) if chunk else ''
                 yield f"data: {chunk_str}\n\n"
@@ -178,34 +167,14 @@ def upload_file():
         
         # 将文件内容保存到会话专属文件中
         if file_content:
-            # 生成会话文件名（使用原始文件名）
-            session_file_path = get_session_file_path(f"{file.filename}.content")
-            
-            # 写入文件内容到会话专属文件
-            with open(session_file_path, 'w', encoding='utf-8') as f:
-                f.write(file_content)
-            
-            # 在会话中只保存文件名的映射关系
-            if 'file_mappings' not in session:
-                session['file_mappings'] = {}
-            
-            # 记录文件映射信息
-            session['file_mappings'][file.filename] = {
-                'session_file': f"{file.filename}.content",
-                'original_file': file.filename,
-                'upload_time': datetime.now().isoformat()
-            }
-            session.modified = True
-            
-            app.logger.info(f"文件内容已保存到会话专属文件: {session_file_path}")
-            
             # 创建一个用于流式传输进度的响应，使用队列和线程
             from queue import Queue
             import threading
             
             # 创建一个队列用于在处理线程和响应生成器之间传递消息
             message_queue = Queue()
-            session_id = get_session_id()
+            # 获取前端传递的会话ID
+            session_id = request.form.get('session_id')
             # 进度回调函数
             def progress_callback(progress, current_batch, total_batches):
                 # 构建进度信息

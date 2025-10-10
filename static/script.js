@@ -13,6 +13,19 @@ document.addEventListener('DOMContentLoaded', function() {
     let uploadedFiles = []; // 存储所有上传的文件名
     let isWaitingForResponse = false;
     let useSampleData = false; // 标记是否使用示例数据
+    let sessionId = null; // 存储会话ID
+
+    // 初始化会话ID，如果本地没有则生成一个新的
+    function initSessionId() {
+        // 不使用localStorage，只在当前页面会话中保存
+        if (!sessionId) {
+            sessionId = 'session_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        }
+        return sessionId;
+    }
+
+    // 页面加载时初始化会话ID
+    initSessionId();
     
     // 文件上传相关事件
     uploadButton.addEventListener('click', (e) => {
@@ -98,6 +111,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // 显示上传中状态
         uploadStatus.textContent = `上传中: ${file.name}`;
         uploadStatus.className = 'upload-status';
+        
+        // 在FormData中添加会话ID
+        formData.append('session_id', sessionId);
         
         // 获取进度条相关元素
         const progressContainer = document.getElementById('progressContainer');
@@ -341,11 +357,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // 总是调用同一个接口，通过参数控制是否使用示例数据库
         const endpoint = '/message';
         
-        // 传递用户消息和是否使用示例数据库的参数
-        const queryParams = new URLSearchParams({
-            text: message,
-            use_sample_data: useSampleData
-        });
+        // 传递用户消息、是否使用示例数据库的参数以及会话ID
+            const queryParams = new URLSearchParams({
+                text: message,
+                use_sample_data: useSampleData,
+                session_id: sessionId
+            });
         
         // 创建EventSource对象来接收服务器发送的事件
         const eventSource = new EventSource(`${endpoint}?${queryParams}`);
