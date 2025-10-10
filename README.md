@@ -8,7 +8,10 @@
 
 具体可以看说明文档:
 
-
+![doc1.png](./static/doc1.png)
+![doc2.png](./static/doc2.png)
+![doc3.png](./static/doc3.png)
+![doc4.png](./static/doc4.png)
 环境：
 请先安装docker环境
 初次使用时，会自动下载模型文件到./model下
