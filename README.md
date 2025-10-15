@@ -7,7 +7,7 @@
 之后用户利用大模型进行问答,系统会根据用户的问题从文档中中提取相关文字作为上下文进行回答。
 简而言之,就是基于RAG的大语言模型文档知识问答系统。
 
-具体可以看说明文档:
+具体可以看说明文档:https://mp.weixin.qq.com/s/VF0gSTUGwoz_hV-K-6cpIw
 
 ![doc1.png](./static/doc1.png)
 ![doc2.png](./static/doc2.png)
