@@ -11,9 +11,31 @@ logger = logging.getLogger(__name__)
 class QwenChatbot:
     def __init__(self, model_name="Qwen/Qwen3-0.6B"):
         logger.info(f"开始加载模型: {model_name}")
+        
+        # 检查是否有可用的GPU
+        if torch.cuda.is_available():
+            device = torch.device("cuda")
+            logger.info(f"检测到GPU，使用设备: {device}")
+        else:
+            device = torch.device("cpu")
+            logger.info("未检测到GPU，使用CPU")
+        
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModelForCausalLM.from_pretrained(model_name)
+        
+        # 加载模型到指定设备
+        self.model = AutoModelForCausalLM.from_pretrained(
+            model_name,
+            torch_dtype=torch.float16 if device.type == "cuda" else torch.float32,
+            device_map="auto" if device.type == "cuda" else None,
+            trust_remote_code=True
+        )
+        
+        # 如果使用GPU但device_map未自动分配，手动移动模型到GPU
+        if device.type == "cuda" and next(self.model.parameters()).device.type == "cpu":
+            self.model = self.model.to(device)
+        
         print(f"测试模型参数在设备: {next(self.model.parameters()).device}")
+        self.device = device
         self.user_histories = {}
         logger.info("模型加载完成")
         logger.debug(f"初始化后用户历史记录字典为空，包含 {len(self.user_histories)} 个用户记录")
@@ -103,8 +125,11 @@ class QwenChatbot:
         # 在后台生成响应
         import threading
         def generate_task():
+            # 将输入数据移动到模型所在的设备
+            inputs_on_device = {k: v.to(self.device) for k, v in inputs.items()}
+            
             with torch.no_grad():
-                self.model.generate(**inputs, max_new_tokens=32768, streamer=streamer)
+                self.model.generate(**inputs_on_device, max_new_tokens=32768, streamer=streamer)
             # 生成完成后放入None作为结束信号
             output_queue.put(None)
         
