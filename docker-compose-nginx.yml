@@ -7,9 +7,19 @@ services:
     volumes:
       - ./model:/model  # 将主机上的model目录挂载到容器内的/model目录，实现双向访问
     
+    # 启用GPU支持
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    
 #    restart: always
     environment:
       TZ: "Asia/Shanghai"
+      NVIDIA_VISIBLE_DEVICES: all
 networks:
   default:
     external: true
