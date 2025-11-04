@@ -13,6 +13,7 @@ class QwenChatbot:
         logger.info(f"开始加载模型: {model_name}")
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.model = AutoModelForCausalLM.from_pretrained(model_name)
+        print(f"测试模型参数在设备: {next(self.model.parameters()).device}")
         self.user_histories = {}
         logger.info("模型加载完成")
         logger.debug(f"初始化后用户历史记录字典为空，包含 {len(self.user_histories)} 个用户记录")
