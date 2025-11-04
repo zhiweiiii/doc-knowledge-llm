@@ -15,8 +15,8 @@ services:
       - "nvidia.com/gpu=all"
     
 #    restart: always
-  environment:
-    TZ: "Asia/Shanghai"
-    NVIDIA_VISIBLE_DEVICES: all
-    CUDA_VISIBLE_DEVICES: 0
+    environment:
+      TZ: "Asia/Shanghai"
+      NVIDIA_VISIBLE_DEVICES: all
+      CUDA_VISIBLE_DEVICES: 0
 
