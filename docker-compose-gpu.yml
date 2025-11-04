@@ -10,16 +10,13 @@ services:
     volumes:
       - ./model:/model  # 将主机上的model目录挂载到容器内的/model目录，实现双向访问
         
-    # 启用GPU支持
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+    # 启用GPU支持 - 使用device属性而不是deploy
+    devices:
+      - "nvidia.com/gpu=all"
     
 #    restart: always
-    environment:
-      TZ: "Asia/Shanghai"
-      NVIDIA_VISIBLE_DEVICES: all
+  environment:
+    TZ: "Asia/Shanghai"
+    NVIDIA_VISIBLE_DEVICES: all
+    CUDA_VISIBLE_DEVICES: 0
+
