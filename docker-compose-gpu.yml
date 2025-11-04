@@ -9,14 +9,17 @@ services:
       - "80:80"
     volumes:
       - ./model:/model  # 将主机上的model目录挂载到容器内的/model目录，实现双向访问
-        
-    # 启用GPU支持 - 使用device属性而不是deploy
-    devices:
-      - "nvidia.com/gpu=all"
-    
-#    restart: always
+    eploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     environment:
       TZ: "Asia/Shanghai"
       NVIDIA_VISIBLE_DEVICES: all
-      CUDA_VISIBLE_DEVICES: 0
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+    runtime: nvidia   # 如果是旧 Compose 需要
+#    restart: always
 
