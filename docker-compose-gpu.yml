@@ -9,7 +9,7 @@ services:
       - "80:80"
     volumes:
       - ./model:/model  # 将主机上的model目录挂载到容器内的/model目录，实现双向访问
-    eploy:
+    deploy:
       resources:
         reservations:
           devices:
