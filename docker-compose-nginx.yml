@@ -1,6 +1,8 @@
 services:
   kn:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile-gpu
     image: kn:v1
     container_name: kn
     ports:
