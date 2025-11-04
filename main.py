@@ -195,6 +195,7 @@ def upload_file():
                     # 尝试添加文档到向量数据库，捕获所有错误
                     success = vector_db.add_document(session_id, file.filename, file_content, progress_callback=progress_callback)
                     # 等待3秒，确保文档处理完成
+                    import time
                     time.sleep(3)
                     
                     if success:
