@@ -1,0 +1,22 @@
+# 忽略model文件夹
+model/
+
+# 忽略Python缓存文件
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 忽略IDE文件
+.idea/
+.vscode/
+
+# 忽略git相关文件
+.git/
+.gitignore
+
+# 忽略构建脚本
+build*.sh
+
+# 忽略其他不需要的文件
+*.log
+*.tmp
