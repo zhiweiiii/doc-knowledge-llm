@@ -18,16 +18,13 @@ class QwenThread(ThreadPoolExecutor):
 
     def __init__(self, **kwargs):
         super(QwenThread, self).__init__(max_workers= 1,thread_name_prefix="test_",**kwargs)
-        if not os.path.exists("/model/Qwen/Qwen3-0___6B/model.safetensors"):
+        if not os.path.exists("/model/Qwen/Qwen3-8B/model.safetensors"):
             print("没有发现模型文件，自动下载文件")
             from modelscope.hub.snapshot_download import snapshot_download
-            snapshot_download('Qwen/Qwen3-0.6B', cache_dir='/model/')
-        self.qwen = QwenChatbot(model_name="/model/Qwen/Qwen3-0___6B/")
+            snapshot_download('Qwen/Qwen3-8B', cache_dir='/model/')
+        self.qwen = QwenChatbot(model_name="/model/Qwen/Qwen3-8B/")
         
         
-        input_message = ["测试", "1+1等于几？"]
-        for e in input_message:
-            self.qwen.stream_generate_response_with_knowledge(e, None, "default")
 
     # 流式对话接口
     def stream_chat_with_knowledge(self, text, knowledge_content=None, user_id="default"):

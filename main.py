@@ -81,6 +81,9 @@ def get_session_file_path(filename, session_id=None):
 def init_qwen_thread():
     global qwenThread
     qwenThread = QwenThread()
+    input_message = ["测试", "1+1等于几？"]
+    for e in input_message:
+        qwenThread.stream_chat_with_knowledge(e, None, "default")
 
 # 合并后的对话接口，通过参数控制是否使用示例数据库
 @app.route('/message', methods=['GET'])
