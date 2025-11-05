@@ -30,10 +30,6 @@ class QwenChatbot:
             trust_remote_code=True
         )
         
-        # 如果使用GPU但device_map未自动分配，手动移动模型到GPU
-        if device.type == "cuda" and next(self.model.parameters()).device.type == "cpu":
-            self.model = self.model.to(device)
-        
         print(f"测试模型参数在设备: {next(self.model.parameters()).device}")
         self.device = device
         self.user_histories = {}
